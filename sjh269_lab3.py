@@ -1,5 +1,10 @@
 import sqlite3
 
+import subprocess
+import platform
+
+# import inquirer
+
 # Define DBOperation class to manage all data into the database.
 # Give a name of your choice to the database
 
@@ -8,14 +13,19 @@ class DBOperations:
 
     data_basename = "DBName.db"
 
-    # creates a tables if non exists.
-    sql_create_table_firsttime = """ 
-    SELECT * FROM sqlite_master ;
+    # check database for employee table.
+    sql_check_table = """ 
+    
+    SELECT name 
+    FROM sqlite_master 
+    WHERE type = table 
+    AND name = employees;
+
     """
 
     # creates a new table.
     sql_create_table = """ 
-    CREATE TABLE employees(
+    CREATE TABLE IF NOT EXISTS employees(
         
         EmployeeID INTEGER  
         Title TEXT NOT NULL , 
@@ -27,7 +37,12 @@ class DBOperations:
         PRIMARY KEY (EmailAddress));
     """
 
-    sql_insert = ""
+    sql_insert = """
+    
+    INSERT INTO employees (EmployeeID, Title, Forename, Surename, Emailaddress, Salary)
+    VALUES (?, ?, ?, ?, ?, ?)
+    
+    """
     sql_select_all = "select * from TableName"
     sql_search = "select * from TableName where EmployeeID = ?"
     sql_update_data = ""
@@ -38,16 +53,16 @@ class DBOperations:
         try:
             # creating a connection
             self.connect = sqlite3.connect(self.data_basename)
-            # creating a cursor to interact with the database.`
+            # creating a cursor to interact with the database.
             self.cursor = self.connect.cursor()
-            # executing a command.
-            # test to see if table exists.
-            self.cursor.execute(self.sql_create_table_firsttime)
+            # if no employee table.
+            if not self.check_table():
+                # create an empty employee table.
+                self.create_table()
             # commit and save the changes.
             self.connect.commit()
         except Exception as e:
             print(e)
-            print("this one is printing the table employees already exists")
         finally:
             self.connect.close()
 
@@ -58,13 +73,32 @@ class DBOperations:
         # creating a cursor to interact with the database.
         self.cursor = self.connect.cursor()
 
+    def check_table(self):
+        """Checks if a table exists in the database."""
+        try:
+            # creating a connection.
+            self.get_connection()
+            # test to see if employee table exists.
+            self.cursor.execute(self.sql_check_table)
+            #
+            if self.cursor.fetchone == None:
+                print("Table does not exists in database.")
+                return False
+            else:
+                print("Table exists in database.")
+                return True
+        except Exception as e:
+            print(e)
+        finally:
+            self.connect.close()
+
     def create_table(self):
         """Creating a table in the database."""
         try:
             self.get_connection()
             self.cursor.execute(self.sql_create_table)
             self.connect.commit()
-            print("Table created successfully")
+            print("Table created successfully.")
         except Exception as e:
             print(e)
             print("this is printing the table of employees already exists")
@@ -73,35 +107,32 @@ class DBOperations:
 
     def drop_table(self):
         """Removes a table from the database."""
+        try:
+            self.get_connection()
+            self.cursor.execute(self.sql_drop_table)
+            self.connect.commit()
+            print("Table deleted successfully.")
+        except Exception as e:
+            print(e)
+        finally:
+            self.connect.close()
         pass
 
-    def recreate_table(self):
-        """???"""
+    def check_data(self, tuple_data):
+        """Checks if inputted data already exist in the table."""
         pass
 
-    def insert_data(self):
+    def check_primary_key(self, primary_key):
+        """Checks if selected primary key already exists in table."""
+        pass
+
+    def insert_data(self, tuple_data):
         """Inserts data into a Table within the database."""
         try:
             self.get_connection()
-
-            # check that input is in the correct format.
-            # HMMM does the employee exist already.
-
-            employee = Employee()
-            # remove input employee id
-            # find max current employeeid and + 1.
-            employee.set_employee_id(int(input("Enter Employee ID: ")))
-            # create new employee details
-            # tile--> drop down menu.
-            # forename and surename --> string input.
-            # email string input with correct formatting.
-            # salary --> int input 2 d.p.
-            self.cursor.execute(
-                self.sql_insert, tuple(str(employee).split("\n"))
-            )
+            self.cursor.execute(self.sql_insert, tuple_data)
             self.connect.commit()
             print("Inserted data successfully")
-            # do you want to add another
         except Exception as e:
             print(e)
         finally:
@@ -246,8 +277,8 @@ class userinput:
         pass
 
 
-def display_menu():
-    print("\n Menu:")
+def admin_menu():
+    print("\n Admin Menu:")
     print("**********")
     print(" 1. Create table EmployeeUoB")
     print(" 2. Insert data into EmployeeUoB")
@@ -259,37 +290,90 @@ def display_menu():
     return
 
 
-def menu_select1(dp_ops):
+def user_menu():
+    print("\n Menu:")
+    print("**********")
+    # print(" 1. Create table EmployeeUoB")
+    print(" 2. Insert data into EmployeeUoB")
+    print(" 3. Select all data into EmployeeUoB")
+    print(" 4. Search an employee")
+    print(" 5. Update data (to update a record")
+    print(" 6. Delete data (to delete a record")
+    print(" 7. Exit\n")
+    return
+
+
+def clear_terminal():
+
+    if platform.system() == "Windows":
+        subprocess.call("cls", shell=True).communicate()
+    else:
+        print("\033c", end="")
+
+
+def menu_select1():
+
+    db_ops = DBOperations()
 
     db_ops.create_table()
     # test does employee table exists.
-    # if exists does admin want to override.
-    # if yes:
-    # drop table
-    # create table
-    # exit
-    pass
+    if db_ops.check_table():
+        # if exists does admin want to override.
+        print("The table exist, do you want to override?")
+        __user_input = input("Enter Y/n: ")
+        if __user_input == "Y":
+            # drop table
+            db_ops.drop_table()
+            # create new table
+            db_ops.create_table()
+        elif __user_input == "n":
+            # exits
+            exit  # look into error here.
+        else:
+            # invalid selection
+            pass  # to do.
+    else:
+        db_ops.create_table()
 
 
-def menu_select2(dp_ops):
+def menu_select2():
 
+    db_ops = DBOperations()
     while True:
         try:
+            employee = Employee()
+            # get employee input data.
+            employee.set_employee_id(int(input("Enter Employee ID: ")))
+            # offer next available id or input --> check input is available.
+            db_ops.check_primary_key(employee.get_employee_id())
+
+            employee.set_employee_title(str(input("Enter Employee Title: ")))
+            employee.set_forename(str(input("Enter Employee Forename: ")))
+            employee.set_surname(str(input("Enter Employee Surname: ")))
+            employee.set_email(str(input("Enter Employee Email: ")))
+            employee.set_salary(int(input("Enter Employee Salary: ")))
+
             # check that input is in the correct format.
-            # HMMM does the employee exist already.
-            # remove input employee id
-            # find max current employee_id and + 1.
-            # create new employee details
-            # tile--> drop down menu.
-            # forename and surename --> string input.
-            # email string input with correct formatting.
-            # salary --> int input 2 d.p.
-            # do you want to add another
-            db_ops.insert_data()
+            # ???
+
+            # convert employee into tuple.
+            input_data = tuple(str(employee).split("\n"))
+
+            # Check does the employee already exist.
+            db_ops.check_data(input_data)
+
+            # insert data into table.
+            db_ops.insert_data(input_data)
+
+            # prompt user to insert
+            print("The table exist, do you want to override?")
+            __user_input = input("Enter Y/n: ")
+            if __user_input == "Y":
+                continue
+            elif __user_input == "n" or "N":
+                exit
         except Exception as e:
             print(e)
-        finally:
-            pass
 
 
 # The main function will parse arguments.
@@ -298,14 +382,12 @@ def menu_select2(dp_ops):
 if __name__ == "__main__":
     while True:
         try:
-            display_menu()
+            # display_menu()
             __choose_menu = int(input("Enter your choice: "))
-            db_ops = DBOperations()
             if __choose_menu == 1:
-                menu_select1(dp_ops)
-                # db_ops.create_table()
+                menu_select1()
             elif __choose_menu == 2:
-                menu_select2(dp_ops)
+                menu_select2()
             elif __choose_menu == 3:
                 db_ops.select_all()
             elif __choose_menu == 4:
