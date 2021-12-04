@@ -36,14 +36,17 @@ class DBOperations:
     
         PRIMARY KEY (EmailAddress));
     """
-
+    # inserts variable data into table.
     sql_insert = """
     
     INSERT INTO employees (EmployeeID, Title, Forename, Surename, Emailaddress, Salary)
     VALUES (?, ?, ?, ?, ?, ?)
     
     """
-    sql_select_all = "select * from TableName"
+
+    # selects all from employee table.
+    sql_select_all = "select * from employees"
+
     sql_search = "select * from TableName where EmployeeID = ?"
     sql_update_data = ""
     sql_delete_data = ""
@@ -80,7 +83,6 @@ class DBOperations:
             self.get_connection()
             # test to see if employee table exists.
             self.cursor.execute(self.sql_check_table)
-            #
             if self.cursor.fetchone == None:
                 print("Table does not exists in database.")
                 return False
@@ -116,7 +118,6 @@ class DBOperations:
             print(e)
         finally:
             self.connect.close()
-        pass
 
     def check_data(self, tuple_data):
         """Checks if inputted data already exist in the table."""
@@ -127,7 +128,7 @@ class DBOperations:
         pass
 
     def insert_data(self, tuple_data):
-        """Inserts data into a Table within the database."""
+        """Inserts data as a tuple into a table within the database."""
         try:
             self.get_connection()
             self.cursor.execute(self.sql_insert, tuple_data)
@@ -139,17 +140,22 @@ class DBOperations:
             self.conn.close()
 
     def select_all(self):
+        """Selects all the data from a Table."""
         try:
             self.get_connection()
             self.cursor.execute(self.sql_select_all)
+            # saves (fetches) all data and assigns it to results.
             results = self.cursor.fetchall()
-
-            # think how you could develop this method to show the records
-
+            return results
         except Exception as e:
             print(e)
         finally:
             self.connect.close()
+
+    def printing_data(self, data):
+        """Formats and prints out data from a tuple to the termial."""
+        for row in data:
+            print(row)
 
     def search_data(self):
         try:
