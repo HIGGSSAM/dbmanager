@@ -14,12 +14,12 @@ class DBOperations:
     database_name = "DBName.db"
 
     # check database for employee table.
-    sql_check_table = """ 
-    
+    sql_check_table = """
+
     SELECT name 
     FROM sqlite_master 
-    WHERE type = table 
-    AND name = employees
+    WHERE type = "table" 
+    AND name = "employees";
 
     """
 
@@ -27,19 +27,19 @@ class DBOperations:
     sql_create_table = """ 
     CREATE TABLE employees(
         
-        EmployeeID INTEGER  
+        EmployeeID INTEGER ,  
         Title TEXT NOT NULL , 
         Forename TEXT(20) NOT NULL , 
         Surname TEXT(20) NOT NULL ,
         EmailAddress  TEXT NOT NULL ,
         Salary INTEGER UNSIGNED NOT NULL ,
     
-        PRIMARY KEY (EmailAddress));
+        PRIMARY KEY (EmployeeID));
     """
     # inserts variable data into table.
     sql_insert = """
     
-    INSERT INTO employees (EmployeeID, Title, Forename, Surename, EmailAddress, Salary)
+    INSERT INTO employees (EmployeeID, Title, Forename, Surname, EmailAddress, Salary)
     VALUES (?, ?, ?, ?, ?, ?)
     
     """
@@ -65,7 +65,7 @@ class DBOperations:
     
     SELECT * 
     FROM TableName 
-    WHERE EmployeeID = (?)
+    WHERE EmployeeID = (?);
     
     """
 
@@ -89,19 +89,16 @@ class DBOperations:
     def __init__(self):
         try:
             # creating a connection
+            # ensures that database file is initialisied.
             self.connect = sqlite3.connect(self.database_name)
-            # creating a cursor to interact with the database.
-            self.cursor = self.connect.cursor()
+            # closing connection to the database.
+            self.connect.close()
             # if no employee table.
             if not self.check_table():
                 # create an empty employee table.
                 self.create_table()
-            # commit and save the changes.
-            self.connect.commit()
         except Exception as e:
             print(e)
-        finally:
-            self.connect.close()
 
     def get_connection(self):
         """Creating a connection to the database."""
@@ -110,19 +107,21 @@ class DBOperations:
         # creating a cursor to interact with the database.
         self.cursor = self.connect.cursor()
 
-    def check_table(self):
+    def check_table(self, error_message=False):
         """Checks if a table exists in the database."""
+        result = True
         try:
             # creating a connection.
             self.get_connection()
             # test to see if employee table exists.
             self.cursor.execute(self.sql_check_table)
-            if self.cursor.fetchone == None:
-                print("Table does not exists in database.")
-                return False
-            else:
-                print("Table exists in database.")
-                return True
+            if self.cursor.fetchone() is None:
+                if error_message:
+                    print("This table does not exists in database.")
+                result = False
+            if error_message:
+                print("This table is already created.")
+            return result
         except Exception as e:
             print(e)
             print("check table def.")
@@ -159,6 +158,7 @@ class DBOperations:
         """Checks if inputted data already exist in the table."""
         try:
             self.get_connection()
+
         except Exception as e:
             print(e)
         finally:
@@ -166,11 +166,15 @@ class DBOperations:
 
     def get_next_primary_key(self):
         """Returns the next available primary key as integer."""
+        next_key = 1
         try:
             self.get_connection()
             self.cursor.execute(self.sql_select_top_primary_key)
-            result = int(self.cursor.fetchall() + 1)
-            return result
+            result = self.cursor.fetchone()[0]
+            if result is None:
+                return next_key
+            next_key = int(result + 1)
+            return next_key
         except Exception as e:
             print(e)
         finally:
@@ -178,6 +182,7 @@ class DBOperations:
 
     def check_primary_key(self, primary_key):
         """Checks if selected primary key already exists in table."""
+
         pass
 
     def insert_data(self, tuple_data):
@@ -187,6 +192,19 @@ class DBOperations:
             self.cursor.execute(self.sql_insert, tuple_data)
             self.connect.commit()
             print("Inserted data successfully")
+        except Exception as e:
+            print(e)
+        finally:
+            self.connect.close()
+
+    def get_column_headers(self):
+        """Returns the columns names of the Employee table."""
+        try:
+            self.get_connection()
+            self.cursor.execute(self.sql_select_all)
+            headers = [member[0] for member in self.cursor.description]
+            headers_tuple = [tuple(headers)]
+            return headers_tuple
         except Exception as e:
             print(e)
         finally:
@@ -340,15 +358,48 @@ class Userinput:
             elif __user_input in ["N", "NO"]:
                 return False
             else:
-                print("Input Error: please input Y/n.")
+                print("Input Error: Please input Y/n.")
 
     def input_int(self, input_message_str):
-        """User input returning int value from input question."""
-        pass
+        """User input returning positive int value from input question."""
+
+        while True:
+            __user_input = input("Enter " + input_message_str + " : ")
+            if __user_input is None:
+                return None
+            else:
+                if __user_input.isdigit() and int(__user_input) > 0:
+                    return int(__user_input)
+
+            print("Input Error: Please enter a positive integer Number.")
+
+    def input_float(self, input_message_str):
+        """User input returning positive float value from input question."""
+
+        while True:
+            __user_input = input("Enter " + input_message_str + " : ")
+            if __user_input is None:
+                return None
+            else:
+                if float(__user_input) and float(__user_input) > 0:
+                    return float(__user_input)
+
+            print("Input Error: Please enter a positive integer Number.")
 
     def input_str(self, input_messge_str):
         """User input returning string value from input question."""
-        pass
+
+        while True:
+            __user_input = input("Enter " + input_messge_str + " : ")
+            if __user_input is None:
+                return None
+            else:
+                if 0 < len(__user_input) < 30:
+                    return __user_input
+                else:
+                    print(
+                        "Input Error: Please enter input with less than 30 characters."
+                    )
 
     def input_list(self, input_message_str, input_items_list):
         """User input from list menu returning a single selection value in a dic, user_selection: ."""
@@ -365,73 +416,112 @@ class Userinput:
         return user_selection
 
 
-class ValidateInput:
+class FormatEmployeeInput:
     def __init__(self) -> None:
         """No state information to be initialised."""
         pass
 
-    def validate_employeeid_format(self, data_input):
+    def input_employee_id(self):
         """Validates format of data input for employee id."""
 
+        user_inputs = Userinput("employee_id")
+        db_ops = DBOperations()
+
         while True:
             try:
-                return int(data_input)
-            except ValueError as e:
-                print("e")
+                # get inputted employee ID.
+                selection = user_inputs.input_int(
+                    "Employee ID or hit Enter for next ID"
+                )
+                # get if input = None then return next available employee ID.
+                if selection is None:
+                    return db_ops.get_next_primary_key()
+                # if input != None then check if key already used.
+                else:
+                    # if used message then already used!
+                    if db_ops.check_primary_key(selection):
+                        print("Employee ID is already used.")
+                    else:
+                        # else return ID.
+                        return int(selection)
+            except Exception as e:
+                print(e)
 
-    def validate_employee_title_input(self, data_input):
+    def input_employee_title(self):
         """Validates the format of data inputted for employee title."""
 
+        user_inputs = Userinput("employee_title")
+
         while True:
             try:
-                return str(data_input)
+                # get inputted employee title.
+                selection = user_inputs.input_str("Employee title")
+                # if input != None then return.
+                if selection is not None:
+                    # format so only first letter is upper case.
+                    return str(selection)
             except Exception as e:
                 print("e")
 
-    def validate_employee_forename_input(self, data_input):
+    def input_employee_forename(self):
         """Validates the format of data inputted for employee forename."""
 
+        user_inputs = Userinput("employee_title")
+
         while True:
             try:
-                if 0 < len(data_input) <= 20:
-                    return str(data_input)
-                else:
-                    print("Input value too long for forename data value.")
+                # get inputted employee forename.
+                selection = user_inputs.input_str("Employee forename")
+                # if input != None then return.
+                if selection is not None:
+                    return str(selection)
             except Exception as e:
                 print("e")
 
-    def validate_employee_surname_input(self, data_input):
+    def input_employee_surname(self):
         """Validates the format of data inputted for employee surname."""
 
+        user_inputs = Userinput("employee_title")
+
         while True:
             try:
-                if 0 < len(data_input) <= 20:
-                    return str(data_input)
-                else:
-                    print("Input value too long for surname data value.")
+                # get inputted employee surname.
+                selection = user_inputs.input_str("Employee Surname")
+                # if input != None then return.
+                if selection is not None:
+                    return str(selection)
             except Exception as e:
                 print("e")
 
-    def validate_employee_email_input(self, data_input):
+    def input_employee_email(self):
         """Validates the format of data inputted for employee email."""
 
+        user_inputs = Userinput("employee_title")
+
         while True:
             try:
-                # re matching __ @ __ . __ format.
-                if re.fullmatch(
-                    "^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$",
-                    data_input,
+                # get inputted employee surname.
+                selection = user_inputs.input_str("Employee email")
+                # if input != None and re matching __ @ __ . __ format.
+                if selection is not None and re.findall(
+                    r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$",
+                    selection,
                 ):
-                    return str(data_input)
+                    return str(selection)
             except Exception as e:
                 print("e")
 
-    def validate_employee_salary_input(self, data_input):
+    def input_employee_salary(self):
         """Validates the format of data inputted for employee salary."""
+        user_inputs = Userinput("employee_title")
 
         while True:
             try:
-                return float(data_input)
+                # get inputted employee salary.
+                selection = user_inputs.input_float("Employee Salary")
+                # if input != None then return.
+                if selection is not None:
+                    return float(selection)
             except Exception as e:
                 print("e")
 
@@ -466,9 +556,12 @@ class Menu:
             "Delete data - delete record in Employee table.",
             "Exit",
         ]
-
+        print(
+            "\nUse the up and down arrows to move through choices available."
+        )
         try:
             if self.admin:
+
                 print("\n Admin Menu:\n -----------")
                 selection = input_selection.input_list(
                     "Enter your selection: ", admin_selections
@@ -490,14 +583,14 @@ class Menu:
         except Exception as e:
             print(e)
 
-    def menu_option_create_table(self):
+    def create_employee_table(self):
         """ADMIN ONLY. Creating the employee table with an override option."""
 
         db_ops = DBOperations()
         user_inputs = Userinput("menu_create_table_inputs")
 
         # test does employee table exists.
-        if db_ops.check_table():
+        if db_ops.check_table(True):
             # if exists does admin want to override.
             if user_inputs.yes_no_input(
                 "The table exist, do you want to override?"
@@ -507,67 +600,41 @@ class Menu:
         else:
             db_ops.create_table()
 
-    def menu_option_insert_data(self):
+    def insert_employee_record(self):
         """Inserting data into the employee table."""
 
         db_ops = DBOperations()
         user_inputs = Userinput("menu_2_inputs")
+        employee = Employee()
+        employee_format = FormatEmployeeInput()
 
         while True:
             try:
-                employee = Employee()
-                check_validity = ValidateInput()
 
-                # prompt user to select available id or enter another.
-                if user_inputs.yes_no_input(
-                    "Do you want to insert your own User ID?"
-                ):
-                    # get employee input data.
-                    employee.set_employee_id(
-                        check_validity.validate_employeeid_format(
-                            input("Enter Employee ID: ")
-                        )
-                    )
-                else:
-                    # gets the next available primary key from table.
-                    employee.set_employee_id(db_ops.get_next_primary_key())
+                # setting employee id from user input.
+                employee.set_employee_id(employee_format.input_employee_id())
 
-                # check input is available.
-                db_ops.check_primary_key(employee.get_employee_id())
-
-                # check that input is in the correct format. ???
+                # setting employee title form user input.
                 employee.set_employee_title(
-                    str(input("Enter Employee Title: "))
+                    employee_format.input_employee_title()
                 )
+
+                # setting employee forename from user input.
                 employee.set_forename(
-                    check_validity.validate_employee_forename_input(
-                        input("Enter Employee Forename: ")
-                    )
+                    employee_format.input_employee_forename()
                 )
-                employee.set_surname(
-                    check_validity.validate_employee_surname_input(
-                        input("Enter Employee Surname: ")
-                    )
-                )
-                employee.set_email(
-                    check_validity.validate_employee_email_input(
-                        input("Enter Employee Email: ")
-                    )
-                )
-                employee.set_salary(
-                    check_validity.validate_employee_salary_input(
-                        input("Enter Employee Salary: ")
-                    )
-                )
+
+                # setting employee surname from user input.
+                employee.set_surname(employee_format.input_employee_surname())
+
+                # setting employee email from user input.
+                employee.set_email(employee_format.input_employee_email())
+
+                # setting employee salary from user input.
+                employee.set_salary(employee_format.input_employee_salary())
 
                 # convert employee into tuple.
                 input_data = tuple(str(employee).split("\n"))
-
-                # NICE TO ADD
-                ## Check does the employee already exist.
-                # db_ops.check_data(
-                #    input_data
-                # )  # warning message if all but primary key is matched. do you still want to add?
 
                 # insert data into table.
                 db_ops.insert_data(input_data)
@@ -581,40 +648,47 @@ class Menu:
             except Exception as e:
                 print(e)
 
-    def menu_option_display(self):
+    def display_employee_records(self):
         """Selects and displays all the data for the Employee table."""
 
         db_ops = DBOperations()
-        while True:
-            try:
-                data = db_ops.select_all()
-                printing_data(data)
-            except Exception as e:
-                print(e)
+        try:
+            # return all the data from the employee table.
+            data = db_ops.select_all()
+            # return all the headers from the employee table.
+            headers = db_ops.get_column_headers()
+            # print out the table employees to the terminal.
+            input = headers + data
+            printing_data(input)  # list of tuples
+        except Exception as e:
+            print(e)
 
-    def menu_option_seaching_employee(self):
+    def seaching_employee_records(self):
         """Displays data in employee table from user input."""
-        pass
 
-    def menu_option_update_data(self):
+    def update_employee_record(self):
         """Updated current data in employee table from user input."""
-        pass
 
-    def menu_option_delete_data(self):
+    def delete_employee_record(self):
         """Deleting current data in employee table from user input."""
-        pass
 
 
 def printing_data(data_tuple):
     """Formats and prints out data from a tuple to the termial."""
-    # if more than 20 records only display the first 20
-    # and press Enter to move through records?
-
-    # print out formatted table with column headers.
-    for row in data_tuple:
-        output = """{0}\t{1}\t{2}\t{3}\t{4}\t{5}""".format(*row)
-        print(output)
-        # print(row)  # format tuple into table.
+    if 0 < len(data_tuple) <= 21:
+        # print out formatted table with column headers.
+        for row in data_tuple:
+            output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
+            print(output)
+    else:
+        # TO DO
+        # if more than 20 records only display the first 20
+        # and press Enter to move through records?
+        counter = 1
+        for row in data_tuple:
+            output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
+            print(output)
+            counter += 1
 
 
 def clear_terminal():
@@ -637,17 +711,17 @@ if __name__ == "__main__":
             __choose_menu = start_menu.user_menu()
 
             if __choose_menu == 1:
-                start_menu.menu_option_create_table()
+                start_menu.create_employee_table()
             elif __choose_menu == 2:
-                start_menu.menu_option_insert_data()
+                start_menu.insert_employee_record()
             elif __choose_menu == 3:
-                start_menu.menu_option_display()
+                start_menu.display_employee_records()
             elif __choose_menu == 4:
-                start_menu.menu_option_seaching_employee()
+                start_menu.seaching_employee_records()
             elif __choose_menu == 5:
-                start_menu.menu_option_update_data()
+                start_menu.update_employee_record()
             elif __choose_menu == 6:
-                start_menu.menu_option_delete_data()
+                start_menu.delete_employee_record()
             elif __choose_menu == 7:
                 exit()
             else:
@@ -655,5 +729,6 @@ if __name__ == "__main__":
         except EOFError:
             exit()
         except KeyboardInterrupt:
-            print("Signal: Interrupt")
+            # print("Signal: Interrupt")
+            print("Aborting Program.")
             exit()
