@@ -30,6 +30,7 @@ import re
 
 
 class DBOperations:
+    """ """
 
     database_name = "DBName.db"
 
@@ -98,6 +99,15 @@ class DBOperations:
     
     """
 
+    # selects specific data from employee table.
+    sql_search_record = """
+    
+    SELECT * 
+    FROM TableName 
+    WHERE EmployeeID, Title, Forename, Surname, EmailAddress, Salary  = (?);
+    
+    """
+
     #
     sql_update_data = """
     
@@ -113,7 +123,7 @@ class DBOperations:
     DROP TABLE employees
 
     """
-    sql_drop_table = ""
+    sql_drop_table = """"""
 
     def __init__(self):
         try:
@@ -182,7 +192,11 @@ class DBOperations:
         """Checks if inputted data already exist in the table."""
         try:
             self.get_connection()
-
+            self.cursor.execute(self.sql_search_record, tuple_data)
+            result = self.cursor.fetchall()
+            if result is None:
+                return False
+            return True
         except Exception as e:
             print(e)
         finally:
@@ -258,6 +272,18 @@ class DBOperations:
         finally:
             self.connect.close()
 
+    def get_employee_record(self, employee_id):
+        """Returns a tuple of empolyee data."""
+        try:
+            self.get_connection()
+            self.cursor.execute(self.sql_search, employee_id)
+            data_tuple = self.cursor.fetchall()
+            return data_tuple
+        except Exception as e:
+            print(e)
+        finally:
+            self.connect.close()
+
     def search_data(self):
         try:
             self.get_connection()
@@ -319,6 +345,10 @@ class DBOperations:
 
 
 class Employee:
+
+    forename_max_length = 20
+    surname_max_length = 20
+
     def __init__(self):
         self.employee_id = 0
         self.employee_title = ""
@@ -364,7 +394,12 @@ class Employee:
         return self.salary
 
     def unpack_employee_tuple(self, data_tuple):
-        pass
+        data_tuple[0] = self.set_employee_id
+        data_tuple[1] = self.set_employee_title
+        data_tuple[2] = self.set_forename
+        data_tuple[3] = self.set_surname
+        data_tuple[4] = self.set_email
+        data_tuple[5] = self.set_salary
 
     def __str__(self):
         return (
@@ -424,7 +459,7 @@ class Userinput:
 
             print("Input Error: Please enter a positive integer Number.")
 
-    def input_str(self, input_messge_str, max_length=20):
+    def input_str(self, input_messge_str, max_length=50):
         """User input returning string value from input question."""
 
         while True:
@@ -535,22 +570,28 @@ class FormatEmployeeInput:
             except Exception as e:
                 print("e")
 
-    def input_employee_forename(self):
+    def input_employee_forename(
+        self, prompt_string, forename_default=None, max_length=50
+    ):
         """Validates the format of data inputted for employee forename."""
 
-        user_inputs = Userinput("employee_title")
+        user_inputs = Userinput("employee_forename")
 
         while True:
             try:
                 # get inputted employee forename.
-                selection = user_inputs.input_str("Employee forename")
+                selection = user_inputs.input_str(prompt_string, max_length)
+                if selection is None:
+                    selection = forename_default
                 # if input != None then return.
                 if selection is not None:
                     return str(selection)
             except Exception as e:
                 print("e")
 
-    def input_employee_surname(self):
+    def input_employee_surname(
+        self, prompt_string, surname_default=None, max_length=50
+    ):
         """Validates the format of data inputted for employee surname."""
 
         user_inputs = Userinput("employee_title")
@@ -558,14 +599,16 @@ class FormatEmployeeInput:
         while True:
             try:
                 # get inputted employee surname.
-                selection = user_inputs.input_str("Employee Surname")
+                selection = user_inputs.input_str(prompt_string, max_length)
+                if selection is None:
+                    selection = surname_default
                 # if input != None then return.
                 if selection is not None:
                     return str(selection)
             except Exception as e:
                 print("e")
 
-    def input_employee_email(self):
+    def input_employee_email(self, prompt_string, email_default=None):
         """Validates the format of data inputted for employee email."""
 
         user_inputs = Userinput("employee_title")
@@ -573,7 +616,9 @@ class FormatEmployeeInput:
         while True:
             try:
                 # get inputted employee surname.
-                selection = user_inputs.input_str("Employee email")
+                selection = user_inputs.input_str(prompt_string)
+                if selection is None:
+                    selection = email_default
                 # if input != None and re matching __ @ __ . __ format.
                 if selection is not None and re.findall(
                     r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$",
@@ -583,14 +628,16 @@ class FormatEmployeeInput:
             except Exception as e:
                 print("e")
 
-    def input_employee_salary(self):
+    def input_employee_salary(self, prompt_string, salary_default=None):
         """Validates the format of data inputted for employee salary."""
         user_inputs = Userinput("employee_title")
 
         while True:
             try:
                 # get inputted employee salary.
-                selection = user_inputs.input_float("Employee Salary")
+                selection = user_inputs.input_float(prompt_string)
+                if selection is None:
+                    selection = salary_default
                 # if input != None then return.
                 if selection is not None:
                     return float(selection)
@@ -701,17 +748,27 @@ class Menu:
 
                 # setting employee forename from user input.
                 employee.set_forename(
-                    employee_format.input_employee_forename()
+                    employee_format.input_employee_forename(
+                        "Employee forename", employee.forename_max_length
+                    )
                 )
 
                 # setting employee surname from user input.
-                employee.set_surname(employee_format.input_employee_surname())
+                employee.set_surname(
+                    employee_format.input_employee_surname(
+                        "Employee surname", employee.surname_max_length
+                    )
+                )
 
                 # setting employee email from user input.
-                employee.set_email(employee_format.input_employee_email())
+                employee.set_email(
+                    employee_format.input_employee_email("employee email")
+                )
 
                 # setting employee salary from user input.
-                employee.set_salary(employee_format.input_employee_salary())
+                employee.set_salary(
+                    employee_format.input_employee_salary("employee salary")
+                )
 
                 # convert employee into tuple.
                 input_data = tuple(str(employee).split("\n"))
@@ -748,6 +805,7 @@ class Menu:
 
     def update_employee_record(self):
         """Updated current data in employee table from user input."""
+
         db_ops = DBOperations()
         user_inputs = Userinput("menu_2_inputs")
         employee = Employee()
@@ -776,7 +834,7 @@ class Menu:
                 )
 
                 # do you want to retain or change value?
-                # setting employee id from user input.
+                # setting employee title from user input.
                 employee.set_employee_title(
                     (
                         employee_format.input_employee_title(
@@ -785,18 +843,61 @@ class Menu:
                     )
                 )
 
-                # do the rest.
+                # do you want to retain or change value?
+                # setting employee forename from user input.
+                employee.set_forename(
+                    (
+                        employee_format.input_employee_forename(
+                            "message",
+                            employee.get_forename(),
+                            employee.forename_max_length,
+                        )
+                    )
+                )
+
+                # do you want to retain or change value?
+                # setting employee surname from user input.
+                employee.set_surname(
+                    (
+                        employee_format.input_employee_surname(
+                            "message",
+                            employee.get_surname(),
+                            employee.surname_max_length,
+                        )
+                    )
+                )
+
+                # do you want to retain or change value?
+                # setting employee email from user input.
+                employee.set_email(
+                    (
+                        employee_format.input_employee_email(
+                            "message", employee.get_email()
+                        )
+                    )
+                )
+
+                # do you want to retain or change value?
+                # setting employee salary from user input.
+                employee.set_salary(
+                    (
+                        employee_format.input_employee_salary(
+                            "message", employee.get_salary()
+                        )
+                    )
+                )
 
                 # do you want to update the details?
-                # if yes update record.i
+                if user_inputs.yes_no_input(
+                    "Do you want to save and updata changes to employee records?"
+                ):
+                    # convert employee into tuple.
+                    input_data = tuple(str(employee).split("\n"))
 
-                # convert employee into tuple.
-                input_data = tuple(str(employee).split("\n"))
+                    # update data in employee table.
+                    db_ops.update_data(input_data)
 
-                # update data in employee table.
-                db_ops.update_data(input_data)
-
-                # prompt user to insert
+                # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
                     "Do you want to enter another employee's details?"
                 ):
