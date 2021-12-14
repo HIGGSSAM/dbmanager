@@ -70,7 +70,7 @@ class DBOperations:
     sql_select_primary_key = """
     SELECT EmployeeID
     FROM employees
-    WHERE EmployeeID = (?);
+    WHERE EmployeeID = ?;
     """
 
     # selects all from employee table and orders the results by employee ID.
@@ -83,14 +83,14 @@ class DBOperations:
     # selects specific data from employee table.
     sql_search = """
     SELECT * 
-    FROM TableName 
-    WHERE EmployeeID = (?);
+    FROM employees 
+    WHERE EmployeeID = ?;
     """
 
     # selects specific data from employees table.
     sql_search_record = """
     SELECT * 
-    FROM TableName 
+    FROM employees 
     WHERE EmployeeID = (?) Title = (?), Forename = (?), Surname = (?), EmailAddress = (?), Salary = (?);
     """
 
@@ -104,7 +104,7 @@ class DBOperations:
     # deletes existing employee record in employees table.
     sql_delete_data = """
     DELETE FROM employees
-    WHERE EmployeeID = (?); 
+    WHERE EmployeeID = ?; 
     """
 
     # deleltes an existing employees table
@@ -265,7 +265,7 @@ class DBOperations:
         try:
             self.get_connection()
             self.cursor.execute(self.sql_search, employee_id)
-            data_tuple = self.cursor.fetchall()
+            data_tuple = self.cursor.fetchall()[0]
             return data_tuple
         except Exception as e:
             print(e)
@@ -372,12 +372,12 @@ class Employee:
         return self.salary
 
     def unpack_employee_tuple(self, data_tuple):
-        data_tuple[0] = self.set_employee_id
-        data_tuple[1] = self.set_employee_title
-        data_tuple[2] = self.set_forename
-        data_tuple[3] = self.set_surname
-        data_tuple[4] = self.set_email
-        data_tuple[5] = self.set_salary
+        self.set_employee_id(data_tuple[0])
+        self.set_employee_title(data_tuple[1])
+        self.set_surname(data_tuple[2])
+        self.set_forename(data_tuple[3])
+        self.set_email(data_tuple[4])
+        self.set_salary(data_tuple[5])
 
     def __str__(self):
         return (
@@ -414,8 +414,8 @@ class Userinput:
         """User input returning positive int value from input question."""
 
         while True:
-            __user_input = input("Enter {}: ".format(input_message_str))
-            if __user_input is None:
+            __user_input = input(f"Enter {input_message_str}: ")
+            if __user_input == "":
                 return None
             if __user_input.isdigit() and int(__user_input) > 0:
                 return int(__user_input)
@@ -425,8 +425,8 @@ class Userinput:
         """User input returning positive float value from input question."""
 
         while True:
-            __user_input = input("Enter {}: ".format(input_message_str))
-            if __user_input is None:
+            __user_input = input(f"Enter {input_message_str}: ")
+            if __user_input == "":
                 return None
             if float(__user_input) and float(__user_input) > 0:
                 return float(__user_input)
@@ -436,8 +436,8 @@ class Userinput:
         """User input returning string value from input question."""
 
         while True:
-            __user_input = input("Enter {}: ".format(input_message_str))
-            if __user_input is None:
+            __user_input = input(f"Enter {input_message_str}: ")
+            if __user_input == "":
                 return None
             if 0 < len(__user_input) < max_length:
                 return __user_input
@@ -493,7 +493,7 @@ class FormatEmployeeInput:
                     return employee_id_default
 
                 # if used message then already used!
-                if db_ops.check_primary_key(selection):
+                if db_ops.check_primary_key((selection,)):
                     print("Employee ID is already used.")
                 else:
                     # else return ID.
@@ -513,7 +513,7 @@ class FormatEmployeeInput:
                 selection = user_inputs.input_int("Enter Employee ID")
                 # if input != None and it exists.
                 if selection is not None and db_ops.check_primary_key(
-                    selection
+                    (selection,)
                 ):
                     return int(selection)
                 print("This employee id does not exist.")
@@ -788,18 +788,18 @@ class Menu:
                 # gets employee record for inputted id value
                 # and saves values to employee.
                 employee.unpack_employee_tuple(
-                    db_ops.get_employee_record(employee.get_employee_id())
+                    db_ops.get_employee_record((employee.get_employee_id(),))
                 )
                 print(
-                    "Please enter a new value or press ENTER to keep \
-                        the existing value."
+                    """Please enter a new value or press
+                     ENTER to keep the existing value."""
                 )
 
                 # display message: do you want to retain or change value?
                 # setting employee id from user input.
                 employee.set_employee_id(
                     employee_format.input_employee_id(
-                        "message", employee.get_employee_id()
+                        "Employee ID", employee.get_employee_id()
                     )
                 )
 
@@ -807,7 +807,7 @@ class Menu:
                 employee.set_employee_title(
                     (
                         employee_format.input_employee_title(
-                            "message", employee.get_employee_title()
+                            "Employee title", employee.get_employee_title()
                         )
                     )
                 )
@@ -816,7 +816,7 @@ class Menu:
                 employee.set_forename(
                     (
                         employee_format.input_employee_forename(
-                            "message",
+                            "Employee forename",
                             employee.get_forename(),
                             employee.forename_max_length,
                         )
@@ -827,7 +827,7 @@ class Menu:
                 employee.set_surname(
                     (
                         employee_format.input_employee_surname(
-                            "message",
+                            "Employee surname",
                             employee.get_surname(),
                             employee.surname_max_length,
                         )
@@ -838,7 +838,7 @@ class Menu:
                 employee.set_email(
                     (
                         employee_format.input_employee_email(
-                            "message", employee.get_email()
+                            "Employee email", employee.get_email()
                         )
                     )
                 )
@@ -847,15 +847,15 @@ class Menu:
                 employee.set_salary(
                     (
                         employee_format.input_employee_salary(
-                            "message", employee.get_salary()
+                            "Employee salary", employee.get_salary()
                         )
                     )
                 )
 
                 # do you want to update the details?
                 if user_inputs.yes_no_input(
-                    "Do you want to save and update changes \
-                        to the Employee record?"
+                    """Do you want to save and update
+                     changes to the Employee record?"""
                 ):
                     # convert employee into tuple.
                     input_data = tuple(str(employee).split("\n"))
