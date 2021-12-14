@@ -20,8 +20,10 @@ Misc Functions:
 """
 
 import sqlite3
-import subprocess
-import platform
+
+# import subprocess
+# import platform
+
 import inquirer
 import re
 
@@ -46,7 +48,7 @@ class DBOperations:
 
     # creates a new table.
     sql_create_table = """ 
-    CREATE TABLE employees(
+    CREATE TABLE IF NOT EXISTS employees(
         
         EmployeeID INTEGER ,  
         Title TEXT NOT NULL , 
@@ -104,7 +106,7 @@ class DBOperations:
     
     SELECT * 
     FROM TableName 
-    WHERE EmployeeID, Title, Forename, Surname, EmailAddress, Salary  = (?);
+    WHERE EmployeeID = (?) Title = (?), Forename = (?), Surname = (?), EmailAddress = (?), Salary = (?);
     
     """
 
@@ -119,11 +121,16 @@ class DBOperations:
 
     #
     sql_delete_data = """
-    
-    DROP TABLE employees
+
+    DELETE FROM employees
+    WHERE EmployeeID = (?); 
 
     """
-    sql_drop_table = """"""
+    sql_drop_table = """
+    
+    DROP TABLE IF EXISTS employees;
+    
+    """
 
     def __init__(self):
         try:
@@ -329,14 +336,15 @@ class DBOperations:
             self.connect.close()
 
     # Define Delete_data method to delete data from the table. The user will need to input the employee id to delete the corrosponding record.
-    def delete_data(self):
+    def delete_data(self, employee_id):
         try:
             self.get_connection()
+            self.cursor.execute(self.sql_delete_data, employee_id)
 
-            if result.rowcount != 0:
-                print(str(result.rowcount) + "Row(s) affected.")
-            else:
-                print("Cannot find this record in the database")
+            # if result.rowcount != 0:
+            #    print(str(result.rowcount) + "Row(s) affected.")
+            # else:
+            #    print("Cannot find this record in the database")
 
         except Exception as e:
             print(e)
@@ -889,13 +897,19 @@ class Menu:
 
                 # do you want to update the details?
                 if user_inputs.yes_no_input(
-                    "Do you want to save and updata changes to employee records?"
+                    "Do you want to save and update changes to the Employee record?"
                 ):
                     # convert employee into tuple.
                     input_data = tuple(str(employee).split("\n"))
 
                     # update data in employee table.
                     db_ops.update_data(input_data)
+
+                    # checks the row has been unpdated.
+                    # if result.rowcount != 0:
+                    #    print(str(result.rowcount) + "Row(s) affected.")
+                    # else:
+                    #    print("Cannot find this record in the database")
 
                 # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
@@ -909,10 +923,34 @@ class Menu:
     def delete_employee_record(self):
         """Deleting current data in employee table from user input."""
 
-        # ask for employeeID to delete.
-        # check if input employeeID exists.
-        # if input doesn't exists error.
-        # if input exists delete row.
+        db_ops = DBOperations()
+        user_inputs = Userinput("menu_2_inputs")
+        employee = Employee()
+        employee_format = FormatEmployeeInput()
+
+        while True:
+            try:
+                # ask for valid employeeID to delete.
+                employee.set_employee_id(employee_format.get_employee_id())
+
+                # if input doesn't exists error.
+                # if input exists delete row.
+
+                # do you want to delete the employee?
+                if user_inputs.yes_no_input(
+                    "Do you want to delete the inputted Employee record?"
+                ):
+                    # delete  data in employee table.
+                    db_ops.delete_data(employee.get_employee_id())
+
+                # prompt user to delete another employee record.
+                if not user_inputs.yes_no_input(
+                    "Do you want to delete another Employee record?"
+                ):
+                    return
+
+            except Exception as e:
+                print(e)
 
 
 def printing_data(data_tuple):
@@ -933,12 +971,12 @@ def printing_data(data_tuple):
             counter += 1
 
 
-def clear_terminal():
-    """Clears the terminal display."""
-    if platform.system() == "Windows":
-        subprocess.call("cls", shell=True).communicate()
-    else:
-        print("\033c", end="")
+# def clear_terminal():
+#    """Clears the terminal display."""
+#    if platform.system() == "Windows":
+#        subprocess.call("cls", shell=True).communicate()
+#    else:
+#        print("\033c", end="")
 
 
 # The main function will parse arguments.
