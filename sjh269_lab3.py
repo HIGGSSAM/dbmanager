@@ -20,12 +20,10 @@ Misc Functions:
 """
 
 import sqlite3
-
-# import subprocess
-# import platform
-
-import inquirer
 import re
+import sys
+import inquirer
+
 
 # Define DBOperation class to manage all data into the database.
 # Give a name of your choice to the database
@@ -47,89 +45,71 @@ class DBOperations:
     """
 
     # creates a new table.
-    sql_create_table = """ 
+    sql_create_table = """
     CREATE TABLE IF NOT EXISTS employees(
-        
         EmployeeID INTEGER ,  
         Title TEXT NOT NULL , 
         Forename TEXT(20) NOT NULL , 
         Surname TEXT(20) NOT NULL ,
         EmailAddress  TEXT NOT NULL ,
         Salary INTEGER UNSIGNED NOT NULL ,
-    
         PRIMARY KEY (EmployeeID));
     """
     # inserts variable data into table.
     sql_insert = """
-    
     INSERT INTO employees (EmployeeID, Title, Forename, Surname, EmailAddress, Salary)
     VALUES (?, ?, ?, ?, ?, ?)
-    
     """
     # returns the top primary key value.
     sql_select_top_primary_key = """
-
     SELECT MAX(EmployeeID)
     FROM employees
-
     """
 
     # check if primary key value is in employee table.
     sql_select_primary_key = """
-
     SELECT EmployeeID
     FROM employees
-    WHERE Employee = (?);
-
+    WHERE EmployeeID = (?);
     """
 
     # selects all from employee table and orders the results by employee ID.
     sql_select_all = """
-    
     SELECT * 
     FROM employees 
     ORDER BY EmployeeID
-    
     """
 
     # selects specific data from employee table.
     sql_search = """
-    
     SELECT * 
     FROM TableName 
     WHERE EmployeeID = (?);
-    
     """
 
-    # selects specific data from employee table.
+    # selects specific data from employees table.
     sql_search_record = """
-    
     SELECT * 
     FROM TableName 
     WHERE EmployeeID = (?) Title = (?), Forename = (?), Surname = (?), EmailAddress = (?), Salary = (?);
-    
     """
 
-    #
+    # updates an existing employee record in employees table.
     sql_update_data = """
-    
     UPDATE employees
     SET VALUES = (?, ?, ?, ?, ?, ?)
     WHERE VALUES = (?, ?, ?, ?, ?, ?);
-
     """
 
-    #
+    # deletes existing employee record in employees table.
     sql_delete_data = """
-
     DELETE FROM employees
     WHERE EmployeeID = (?); 
-
     """
+
+    # deleltes an existing employees table
     sql_drop_table = """
-    
     DROP TABLE IF EXISTS employees;
-    
     """
 
     def __init__(self):
@@ -137,6 +117,7 @@ class DBOperations:
             # creating a connection
             # ensures that database file is initialisied.
             self.connect = sqlite3.connect(self.database_name)
+            self.cursor = None
             # closing connection to the database.
             self.connect.close()
             # if no employee table.
@@ -313,39 +294,28 @@ class DBOperations:
                         print("Salary: " + str(detail))
             else:
                 print("No Record")
-
         except Exception as e:
             print(e)
         finally:
             self.connect.close()
 
     def update_data(self, data_tuple):
+        """Updates an employee record in Employee Table form input tuple."""
         try:
             self.get_connection()
-
-            # Update statement
-
-            # if result.rowcount != 0:
-            #    print(str(result.rowcount) + "Row(s) affected.")
-            # else:
-            #    print("Cannot find this record in the database")
-
+            self.cursor.execute(self.sql_update_data, data_tuple)
+            self.connect.commit()
         except Exception as e:
             print(e)
         finally:
             self.connect.close()
 
-    # Define Delete_data method to delete data from the table. The user will need to input the employee id to delete the corrosponding record.
     def delete_data(self, employee_id):
+        """Deletes employee record from Employee Table using employee id."""
         try:
             self.get_connection()
             self.cursor.execute(self.sql_delete_data, employee_id)
-
-            # if result.rowcount != 0:
-            #    print(str(result.rowcount) + "Row(s) affected.")
-            # else:
-            #    print("Cannot find this record in the database")
-
+            self.connect.commit()
         except Exception as e:
             print(e)
         finally:
@@ -436,57 +406,53 @@ class Userinput:
             __user_input = input("Enter Y/n: ").upper()
             if __user_input in ["Y", "YES"]:
                 return True
-            elif __user_input in ["N", "NO"]:
+            if __user_input in ["N", "NO"]:
                 return False
-            else:
-                print("Input Error: Please input Y/n.")
+            print("Input Error: Please input Y/n.")
 
     def input_int(self, input_message_str):
         """User input returning positive int value from input question."""
 
         while True:
-            __user_input = input("Enter " + input_message_str + " : ")
+            __user_input = input("Enter {}: ".format(input_message_str))
             if __user_input is None:
                 return None
-            else:
-                if __user_input.isdigit() and int(__user_input) > 0:
-                    return int(__user_input)
-
+            if __user_input.isdigit() and int(__user_input) > 0:
+                return int(__user_input)
             print("Input Error: Please enter a positive integer Number.")
 
     def input_float(self, input_message_str):
         """User input returning positive float value from input question."""
 
         while True:
-            __user_input = input("Enter " + input_message_str + " : ")
+            __user_input = input("Enter {}: ".format(input_message_str))
             if __user_input is None:
                 return None
-            else:
-                if float(__user_input) and float(__user_input) > 0:
-                    return float(__user_input)
-
+            if float(__user_input) and float(__user_input) > 0:
+                return float(__user_input)
             print("Input Error: Please enter a positive integer Number.")
 
-    def input_str(self, input_messge_str, max_length=50):
+    def input_str(self, input_message_str, max_length=50):
         """User input returning string value from input question."""
 
         while True:
-            __user_input = input("Enter " + input_messge_str + " : ")
-
+            __user_input = input("Enter {}: ".format(input_message_str))
             if __user_input is None:
                 return None
-
             if 0 < len(__user_input) < max_length:
                 return __user_input
-
             print(
-                "Input Error: Please enter input with less than {} characters".format(
+                "Input Error: Please enter input with less than \
+                    {} characters".format(
                     max_length
                 )
             )
 
     def input_list(self, input_message_str, input_items_list):
-        """User input from list menu returning a single selection value in a dic, user_selection: ."""
+        """
+        User input from list menu returning a single selection
+        value in a dic, user_selection:
+        """
 
         questions = [
             inquirer.List(
@@ -515,28 +481,23 @@ class FormatEmployeeInput:
             try:
                 # get inputted employee ID.
                 selection = user_inputs.input_int(prompt_string)
+
                 # get if input = None and no current value
                 # then return next available employee ID.
                 if selection is None and employee_id_default is None:
                     return db_ops.get_next_primary_key()
+
                 # get if input = None and there is a current value
                 # then return the current employee ID.
-                elif selection is None and employee_id_default is not None:
+                if selection is None and employee_id_default is not None:
                     return employee_id_default
-                # if input != None and no current value.
-                # then check if key already used.
-                elif (
-                    employee_id_default is None
-                    or selection != employee_id_default
-                ):
-                    # if used message then already used!
-                    if db_ops.check_primary_key(selection):
-                        print("Employee ID is already used.")
-                    else:
-                        # else return ID.
-                        return int(selection)
-                elif employee_id_default == selection:
-                    return employee_id_default
+
+                # if used message then already used!
+                if db_ops.check_primary_key(selection):
+                    print("Employee ID is already used.")
+                else:
+                    # else return ID.
+                    return int(selection)
             except Exception as e:
                 print(e)
 
@@ -555,8 +516,7 @@ class FormatEmployeeInput:
                     selection
                 ):
                     return int(selection)
-                else:
-                    print("This employee id does not exist.")
+                print("This employee id does not exist.")
             except Exception as e:
                 print(e)
 
@@ -576,7 +536,7 @@ class FormatEmployeeInput:
                     # format so only first letter is upper case.
                     return str(selection)
             except Exception as e:
-                print("e")
+                print(e)
 
     def input_employee_forename(
         self, prompt_string, forename_default=None, max_length=50
@@ -595,7 +555,7 @@ class FormatEmployeeInput:
                 if selection is not None:
                     return str(selection)
             except Exception as e:
-                print("e")
+                print(e)
 
     def input_employee_surname(
         self, prompt_string, surname_default=None, max_length=50
@@ -614,7 +574,7 @@ class FormatEmployeeInput:
                 if selection is not None:
                     return str(selection)
             except Exception as e:
-                print("e")
+                print(e)
 
     def input_employee_email(self, prompt_string, email_default=None):
         """Validates the format of data inputted for employee email."""
@@ -634,7 +594,7 @@ class FormatEmployeeInput:
                 ):
                     return str(selection)
             except Exception as e:
-                print("e")
+                print(e)
 
     def input_employee_salary(self, prompt_string, salary_default=None):
         """Validates the format of data inputted for employee salary."""
@@ -650,7 +610,7 @@ class FormatEmployeeInput:
                 if selection is not None:
                     return float(selection)
             except Exception as e:
-                print("e")
+                print(e)
 
 
 class Menu:
@@ -825,12 +785,14 @@ class Menu:
                 # prompt for input employee id and save.
                 employee.set_employee_id(employee_format.get_employee_id())
 
-                # gets employee record for inputted id value and saves values to employee.
+                # gets employee record for inputted id value
+                # and saves values to employee.
                 employee.unpack_employee_tuple(
                     db_ops.get_employee_record(employee.get_employee_id())
                 )
                 print(
-                    "Please enter a new value or press ENTER to keep the existing value."
+                    "Please enter a new value or press ENTER to keep \
+                        the existing value."
                 )
 
                 # display message: do you want to retain or change value?
@@ -841,7 +803,6 @@ class Menu:
                     )
                 )
 
-                # do you want to retain or change value?
                 # setting employee title from user input.
                 employee.set_employee_title(
                     (
@@ -851,7 +812,6 @@ class Menu:
                     )
                 )
 
-                # do you want to retain or change value?
                 # setting employee forename from user input.
                 employee.set_forename(
                     (
@@ -863,7 +823,6 @@ class Menu:
                     )
                 )
 
-                # do you want to retain or change value?
                 # setting employee surname from user input.
                 employee.set_surname(
                     (
@@ -875,7 +834,6 @@ class Menu:
                     )
                 )
 
-                # do you want to retain or change value?
                 # setting employee email from user input.
                 employee.set_email(
                     (
@@ -885,7 +843,6 @@ class Menu:
                     )
                 )
 
-                # do you want to retain or change value?
                 # setting employee salary from user input.
                 employee.set_salary(
                     (
@@ -897,19 +854,14 @@ class Menu:
 
                 # do you want to update the details?
                 if user_inputs.yes_no_input(
-                    "Do you want to save and update changes to the Employee record?"
+                    "Do you want to save and update changes \
+                        to the Employee record?"
                 ):
                     # convert employee into tuple.
                     input_data = tuple(str(employee).split("\n"))
 
                     # update data in employee table.
                     db_ops.update_data(input_data)
-
-                    # checks the row has been unpdated.
-                    # if result.rowcount != 0:
-                    #    print(str(result.rowcount) + "Row(s) affected.")
-                    # else:
-                    #    print("Cannot find this record in the database")
 
                 # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
@@ -933,14 +885,11 @@ class Menu:
                 # ask for valid employeeID to delete.
                 employee.set_employee_id(employee_format.get_employee_id())
 
-                # if input doesn't exists error.
-                # if input exists delete row.
-
-                # do you want to delete the employee?
+                # do you want to delete the selected employee?
                 if user_inputs.yes_no_input(
-                    "Do you want to delete the inputted Employee record?"
+                    "Do you want to delete the selected Employee record?"
                 ):
-                    # delete  data in employee table.
+                    # delete data in employee table.
                     db_ops.delete_data(employee.get_employee_id())
 
                 # prompt user to delete another employee record.
@@ -979,13 +928,9 @@ def printing_data(data_tuple):
 #        print("\033c", end="")
 
 
-# The main function will parse arguments.
-# These argument will be definded by the users on the console.
-# The user will select a choice from the menu to interact with the database.
 if __name__ == "__main__":
     while True:
         try:
-            # clear_terminal()
             # choose admin status
             start_menu = Menu(True)
             __choose_menu = start_menu.user_menu()
@@ -1003,12 +948,11 @@ if __name__ == "__main__":
             elif __choose_menu == 6:
                 start_menu.delete_employee_record()
             elif __choose_menu == 7:
-                exit()
+                sys.exit()
             else:
                 print("Invalid Choice")
         except EOFError:
-            exit()
+            sys.exit()
         except KeyboardInterrupt:
-            # print("Signal: Interrupt")
-            print("Aborting Program.")
-            exit()
+            print("\nAborting Program ...\n")
+            sys.exit()
