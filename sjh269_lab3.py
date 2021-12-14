@@ -24,13 +24,53 @@ import re
 import sys
 import inquirer
 
+# Disable the pylint errors from Black reformatting style on block indents
 
+# pylint: disable=C0330
+# suppress warning about too broad an exception
+
+# pylint: disable=W0703
 # Define DBOperation class to manage all data into the database.
 # Give a name of your choice to the database
 
 
 class DBOperations:
-    """ """
+    """
+    Contains all methods and variables associated with database manipulation.
+
+    Variables:
+    ----------
+    - database_name (str)
+    - sql_check_table (str)
+    - sql_create_table (str)
+    - sql_insert (str)
+    - sql_select_top_primary_key (str)
+    - sql_select_primary_key (str)
+    - sql_select_all (str)
+    - sql_search (str)
+    - sql_search_record (str)
+    - sql_update_data (str)
+    - sql_delete_data (str)
+    - sql_drop_table (str)
+
+    Methods:
+    --------
+    - get_connection()
+    - check_table() -> returns boolean
+    - create_table() -> returns boolean
+    - drop_table() -> returns boolean
+    - check_data(tuple) -> returns boolean
+    - get_next_primary_key() -> returns int
+    - check_primary_key(tuple) -> returns boolean
+    - insert_data(tuple)
+    - get_column_headers() -> returns tuple
+    - select_all() -> returns list
+    - get_employee_record(tuple) -> returns tuple
+    - search_data TO DO
+    - update_data(tuple)
+    - delete_data(tuple)
+
+    """
 
     database_name = "DBName.db"
 
@@ -55,11 +95,13 @@ class DBOperations:
         Salary INTEGER UNSIGNED NOT NULL ,
         PRIMARY KEY (EmployeeID));
     """
+
     # inserts variable data into table.
     sql_insert = """
     INSERT INTO employees (EmployeeID, Title, Forename, Surname, EmailAddress, Salary)
     VALUES (?, ?, ?, ?, ?, ?)
     """
+
     # returns the top primary key value.
     sql_select_top_primary_key = """
     SELECT MAX(EmployeeID)
@@ -97,8 +139,8 @@ class DBOperations:
     # updates an existing employee record in employees table.
     sql_update_data = """
     UPDATE employees
-    SET VALUES = (?, ?, ?, ?, ?, ?)
-    WHERE VALUES = (?, ?, ?, ?, ?, ?);
+    SET EmployeeID = :ID, Title = :Title, Forename = :Forename, Surname = :Surname, EmailAddress = :Email, Salary = :Salary
+    WHERE EmployeeID = :CurrentID;
     """
 
     # deletes existing employee record in employees table.
@@ -136,15 +178,14 @@ class DBOperations:
 
     def check_table(self):
         """Checks if a table exists in the database."""
-        result = True
         try:
             # creating a connection.
             self.get_connection()
             # test to see if employee table exists.
             self.cursor.execute(self.sql_check_table)
             if self.cursor.fetchone() is None:
-                result = False
-            return result
+                return False
+            return True
         except Exception as e:
             print(e)
         finally:
@@ -206,17 +247,16 @@ class DBOperations:
         finally:
             self.connect.close()
 
-    def check_primary_key(self, employee_id):
+    def check_primary_key(self, tuple_employee_id):
         """Checks if selected primary key already exists in table."""
-        result = True
         try:
             # creating a connection.
             self.get_connection()
             # test to see if employeeID exists in .
-            self.cursor.execute(self.sql_select_primary_key, employee_id)
+            self.cursor.execute(self.sql_select_primary_key, tuple_employee_id)
             if self.cursor.fetchone() is None:
-                result = False
-            return result
+                return False
+            return True
         except Exception as e:
             print(e)
         finally:
@@ -228,7 +268,7 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_insert, tuple_data)
             self.connect.commit()
-            print("Inserted data successfully")
+            print("Inserted data successfully")  # do I want this here?
         except Exception as e:
             print(e)
         finally:
@@ -260,11 +300,11 @@ class DBOperations:
         finally:
             self.connect.close()
 
-    def get_employee_record(self, employee_id):
+    def get_employee_record(self, tuple_employee_id):
         """Returns a tuple of empolyee data."""
         try:
             self.get_connection()
-            self.cursor.execute(self.sql_search, employee_id)
+            self.cursor.execute(self.sql_search, tuple_employee_id)
             data_tuple = self.cursor.fetchall()[0]
             return data_tuple
         except Exception as e:
@@ -299,22 +339,22 @@ class DBOperations:
         finally:
             self.connect.close()
 
-    def update_data(self, data_tuple):
+    def update_data(self, data_dic):
         """Updates an employee record in Employee Table form input tuple."""
         try:
             self.get_connection()
-            self.cursor.execute(self.sql_update_data, data_tuple)
+            self.cursor.execute(self.sql_update_data, data_dic)
             self.connect.commit()
         except Exception as e:
             print(e)
         finally:
             self.connect.close()
 
-    def delete_data(self, employee_id):
+    def delete_data(self, tuple_employee_id):
         """Deletes employee record from Employee Table using employee id."""
         try:
             self.get_connection()
-            self.cursor.execute(self.sql_delete_data, employee_id)
+            self.cursor.execute(self.sql_delete_data, tuple_employee_id)
             self.connect.commit()
         except Exception as e:
             print(e)
@@ -323,6 +363,31 @@ class DBOperations:
 
 
 class Employee:
+    """
+    Contains all methods an variables accosiated with an employee.
+
+    Variables:
+    ----------
+    - forename_max_lenght (int) = 20
+    - surname_max_lenght (int) = 20
+
+    Methods:
+    --------
+    - set_employee_id(int)
+    - set_employee_title(str)
+    - set_forename(str)
+    - set_surname(str)
+    - set_email(str)
+    - set_salary(float)
+    - get_employee_id() -> returns set_employee_id())
+    - get_employee_title() -> returns set_employee_title()
+    - get_forename() -> returns set_forename()
+    - get_surname() -> returns set_surname()
+    - get_email() -> returns set_email()
+    - get_salary() -> returns set_salary()
+    - unpack_employee_tuple(tuple)
+
+    """
 
     forename_max_length = 20
     surname_max_length = 20
@@ -336,48 +401,71 @@ class Employee:
         self.salary = 0.0
 
     def set_employee_id(self, employee_id):
+        """Sets employee id."""
         self.employee_id = employee_id
 
     def set_employee_title(self, employee_title):
+        """Sets employee title."""
         self.employee_title = employee_title
 
     def set_forename(self, forename):
+        """Sets employee forename."""
         self.forename = forename
 
     def set_surname(self, surname):
+        """Sets employee surname."""
         self.surname = surname
 
     def set_email(self, email):
+        """Sets employee email."""
         self.email = email
 
     def set_salary(self, salary):
+        """Sets employee salary."""
         self.salary = salary
 
     def get_employee_id(self):
+        """Gets employee id."""
         return self.employee_id
 
     def get_employee_title(self):
+        """Gets employee title."""
         return self.employee_title
 
     def get_forename(self):
+        """Gets employee forename."""
         return self.forename
 
     def get_surname(self):
+        """Gets employee surname."""
         return self.surname
 
     def get_email(self):
+        """Gets employee email."""
         return self.email
 
     def get_salary(self):
+        """Gets employee salary."""
         return self.salary
 
     def unpack_employee_tuple(self, data_tuple):
+        """Unpacks employee tuple record."""
         self.set_employee_id(data_tuple[0])
         self.set_employee_title(data_tuple[1])
         self.set_surname(data_tuple[2])
         self.set_forename(data_tuple[3])
         self.set_email(data_tuple[4])
         self.set_salary(data_tuple[5])
+
+    def employee_record_dic(self):
+        return {
+            "ID": self.employee_id,
+            "Title": self.employee_title,
+            "Forename": self.forename,
+            "Surname": self.surname,
+            "Email": self.email,
+            "Salary": self.salary,
+        }
 
     def __str__(self):
         return (
@@ -442,10 +530,8 @@ class Userinput:
             if 0 < len(__user_input) < max_length:
                 return __user_input
             print(
-                "Input Error: Please enter input with less than \
-                    {} characters".format(
-                    max_length
-                )
+                f"""Input Error: Please enter input with
+                 less than {max_length} characters"""
             )
 
     def input_list(self, input_message_str, input_items_list):
@@ -479,6 +565,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if employee_id_default is not None:
+                    prompt_string += " [" + str(employee_id_default) + "]"
                 # get inputted employee ID.
                 selection = user_inputs.input_int(prompt_string)
 
@@ -527,6 +615,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if title_default is not None:
+                    prompt_string += " [" + title_default + "]"
                 # get inputted employee title.
                 selection = user_inputs.input_str(prompt_string)
                 if selection is None:
@@ -547,6 +637,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if forename_default is not None:
+                    prompt_string += "[" + forename_default + "]"
                 # get inputted employee forename.
                 selection = user_inputs.input_str(prompt_string, max_length)
                 if selection is None:
@@ -566,6 +658,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if surname_default is not None:
+                    prompt_string += "[" + surname_default + "]"
                 # get inputted employee surname.
                 selection = user_inputs.input_str(prompt_string, max_length)
                 if selection is None:
@@ -583,6 +677,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if email_default is not None:
+                    prompt_string += " [" + email_default + "]"
                 # get inputted employee surname.
                 selection = user_inputs.input_str(prompt_string)
                 if selection is None:
@@ -602,6 +698,8 @@ class FormatEmployeeInput:
 
         while True:
             try:
+                if salary_default is not None:
+                    prompt_string += " [" + str(salary_default) + "]"
                 # get inputted employee salary.
                 selection = user_inputs.input_float(prompt_string)
                 if selection is None:
@@ -771,6 +869,30 @@ class Menu:
     def seaching_employee_records(self):
         """Displays data in employee table from user input."""
 
+        user_inputs = Userinput("menu_2_inputs")
+        db_ops = DBOperations()
+        employee_format = FormatEmployeeInput()
+
+        while True:
+            try:
+                # get user inputted empoyee id.
+                data = db_ops.get_employee_record(
+                    (employee_format.get_employee_id(),)
+                )
+                # return all the headers from the employee table.
+                headers = db_ops.get_column_headers()
+                # print out employee record to the terminal.
+                display_table = headers + [data]
+                printing_data(display_table)  # list of tuples
+
+                # prompt user to edit another employee record.
+                if not user_inputs.yes_no_input(
+                    "Do you want to search another employee's details?"
+                ):
+                    return
+            except Exception as e:
+                print(e)
+
     def update_employee_record(self):
         """Updated current data in employee table from user input."""
 
@@ -785,14 +907,16 @@ class Menu:
                 # prompt for input employee id and save.
                 employee.set_employee_id(employee_format.get_employee_id())
 
+                # save current employeee ID.
+                current_employee_id = employee.get_employee_id()
+
                 # gets employee record for inputted id value
                 # and saves values to employee.
                 employee.unpack_employee_tuple(
                     db_ops.get_employee_record((employee.get_employee_id(),))
                 )
                 print(
-                    """Please enter a new value or press
-                     ENTER to keep the existing value."""
+                    "Please enter a new value or press ENTER to keep the existing value."
                 )
 
                 # display message: do you want to retain or change value?
@@ -854,11 +978,11 @@ class Menu:
 
                 # do you want to update the details?
                 if user_inputs.yes_no_input(
-                    """Do you want to save and update
-                     changes to the Employee record?"""
+                    "Do you want to save and update changes to the Employee record?"
                 ):
-                    # convert employee into tuple.
-                    input_data = tuple(str(employee).split("\n"))
+                    # convert employee into dictionary.
+                    input_data = employee.employee_record_dic()
+                    input_data.update({"CurrentID": current_employee_id})
 
                     # update data in employee table.
                     db_ops.update_data(input_data)
@@ -890,7 +1014,7 @@ class Menu:
                     "Do you want to delete the selected Employee record?"
                 ):
                     # delete data in employee table.
-                    db_ops.delete_data(employee.get_employee_id())
+                    db_ops.delete_data((employee.get_employee_id(),))
 
                 # prompt user to delete another employee record.
                 if not user_inputs.yes_no_input(
@@ -904,20 +1028,20 @@ class Menu:
 
 def printing_data(data_tuple):
     """Formats and prints out data from a tuple to the termial."""
-    if 0 < len(data_tuple) <= 21:
-        # print out formatted table with column headers.
-        for row in data_tuple:
-            output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
-            print(output)
-    else:
-        # TO DO
-        # if more than 20 records only display the first 20
-        # and press Enter to move through records?
-        counter = 1
-        for row in data_tuple:
-            output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
-            print(output)
-            counter += 1
+    # if 0 < len(data_tuple) <= 21:
+    # print out formatted table with column headers.
+    for row in data_tuple:
+        output = f"""{row[0]}|{row[1]}|{row[2]}|{row[3]}|{row[4]}|{row[5]}"""
+        print(output)
+    # else:
+    # TO DO
+    # if more than 20 records only display the first 20
+    # and press Enter to move through records?
+    #    counter = 1
+    #    for row in data_tuple:
+    #        output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
+    #        print(output)
+    #        counter += 1
 
 
 # def clear_terminal():
