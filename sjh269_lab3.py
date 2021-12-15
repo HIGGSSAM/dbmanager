@@ -31,12 +31,7 @@ import inquirer
 
 # Disable the pylint errors from Black reformatting style on block indents
 
-# pylint: disable=C0330
-# suppress warning about too broad an exception
-
 # pylint: disable=W0703
-# Define DBOperation class to manage all data into the database.
-# Give a name of your choice to the database
 
 
 class DBOperations:
@@ -172,7 +167,6 @@ class DBOperations:
                 self.create_table()
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
 
     def get_connection(self):
         """Creating a connection to the database."""
@@ -275,7 +269,6 @@ class DBOperations:
             self.connect.commit()
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
         finally:
             self.connect.close()
 
@@ -325,9 +318,10 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_update_data, data_dic)
             self.connect.commit()
+            return True
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
+            return False
         finally:
             self.connect.close()
 
@@ -337,9 +331,10 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_delete_data, tuple_employee_id)
             self.connect.commit()
+            return True
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
+            return False
         finally:
             self.connect.close()
 
@@ -434,12 +429,13 @@ class Employee:
         """Unpacks employee tuple record."""
         self.set_employee_id(data_tuple[0])
         self.set_employee_title(data_tuple[1])
-        self.set_surname(data_tuple[2])
-        self.set_forename(data_tuple[3])
+        self.set_forename(data_tuple[2])
+        self.set_surname(data_tuple[3])
         self.set_email(data_tuple[4])
         self.set_salary(data_tuple[5])
 
     def employee_record_dic(self):
+        """Returns employee record as a dictionary."""
         return {
             "ID": self.employee_id,
             "Title": self.employee_title,
@@ -466,6 +462,19 @@ class Employee:
 
 
 class Userinput:
+    """
+    Utility class for generalised user inputs.
+
+    Methods:
+    --------
+    - yes_no_input(str) -> returns boolean
+    - input_int(str) -> returns int
+    - input_float(str) -> returns float
+    - input_str(str, int) -> returns str
+    - input_list(str, list) -> returns str
+
+    """
+
     def __init__(self, input_menu):
         self.input_menu = input_menu
 
@@ -535,6 +544,21 @@ class Userinput:
 
 
 class FormatEmployeeInput:
+    """
+    Class to check format of user inputs related to employee.
+
+    Methods:
+    --------
+    - input_employee_id(str, int=None) -> returns int
+    - get_employee_id() -> returns int
+    - input_employee_title(str, str=None) -> returns str
+    - input_employee_forename(str, str=None, int=50) -> returns str
+    - input_employee_surname(str, str=None, int=50) -> returns str
+    - input_employee_email(str, str=None) -> returns str
+    - input_employee_title(str, float=None) -> returns float
+
+    """
+
     def __init__(self) -> None:
         """No state information to be initialised."""
 
@@ -579,7 +603,7 @@ class FormatEmployeeInput:
         while True:
             try:
                 #  Entering employee ID.
-                selection = user_inputs.input_int("Enter Employee ID")
+                selection = user_inputs.input_int("Employee ID")
                 # if input != None and it exists.
                 if selection is not None and db_ops.check_primary_key(
                     (selection,)
@@ -694,6 +718,20 @@ class FormatEmployeeInput:
 
 
 class Menu:
+    """
+    Utility class for displaying menu.
+
+    Methods:
+    --------
+    - user_menu() -> returns int
+    - create_employee_table()
+    - insert_employee_record()
+    - display_employee_records()
+    - searching_employee_record()
+    - update_employee_record()
+    - delete_employee_record()
+    """
+
     def __init__(self, admin=False):
         """Inistailises admin status, default value is false."""
         self.admin = admin
@@ -755,6 +793,7 @@ class Menu:
             return selection
         except Exception as err:
             print(err)
+            return None
         finally:
             screen_display.show_cursor()
 
@@ -842,8 +881,8 @@ class Menu:
                 ):
                     return
 
-            except Exception as e:
-                print(e)
+            except Exception as err:
+                print(err)
 
     def display_employee_records(self):
         """Selects and displays all the data for the Employee table."""
@@ -860,8 +899,8 @@ class Menu:
             headers = db_ops.get_column_headers()
             # print out the table employees to the terminal.
             display_data.printing_data(data, headers)
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            print(err)
 
     def seaching_employee_records(self):
         """Displays data in employee table from user input."""
@@ -892,8 +931,8 @@ class Menu:
                     "Do you want to search another employee's details?"
                 ):
                     return
-            except Exception as e:
-                print(e)
+            except Exception as err:
+                print(err)
 
     def update_employee_record(self):
         """Updated current data in employee table from user input."""
@@ -993,7 +1032,11 @@ class Menu:
                     input_data.update({"CurrentID": current_employee_id})
 
                     # update data in employee table.
-                    db_ops.update_data(input_data)
+                    if db_ops.update_data(input_data):
+                        print(
+                            f"Employee ID = {str(current_employee_id)}"
+                            " was updated"
+                        )
 
                 # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
@@ -1001,8 +1044,8 @@ class Menu:
                 ):
                     return
 
-            except Exception as e:
-                print(e)
+            except Exception as err:
+                print(err)
 
     def delete_employee_record(self):
         """Deleting current data in employee table from user input."""
@@ -1026,7 +1069,11 @@ class Menu:
                     "Do you want to delete the selected Employee record?"
                 ):
                     # delete data in employee table.
-                    db_ops.delete_data((employee.get_employee_id(),))
+                    if db_ops.delete_data((employee.get_employee_id(),)):
+                        print(
+                            f"Employee ID = {str(employee.get_employee_id())}"
+                            " was deleted."
+                        )
 
                 # prompt user to delete another employee record.
                 if not user_inputs.yes_no_input(
@@ -1034,8 +1081,8 @@ class Menu:
                 ):
                     return
 
-            except Exception as e:
-                print(e)
+            except Exception as err:
+                print(err)
 
 
 class Displaydata:
