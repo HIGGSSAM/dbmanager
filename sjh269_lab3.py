@@ -20,12 +20,14 @@ Misc Functions:
 
 """
 
+
 import sqlite3
 import re
 import sys
-import inquirer
+from os import system, name
 import pandas as pd
 from tabulate import tabulate
+import inquirer
 
 # Disable the pylint errors from Black reformatting style on block indents
 
@@ -168,8 +170,9 @@ class DBOperations:
             if not self.check_table():
                 # create an empty employee table.
                 self.create_table()
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
 
     def get_connection(self):
         """Creating a connection to the database."""
@@ -188,6 +191,7 @@ class DBOperations:
             return True
         except sqlite3.DatabaseError as err:
             print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -198,8 +202,9 @@ class DBOperations:
             self.cursor.execute(self.sql_create_table)
             self.connect.commit()
             return True
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
             return False
         finally:
             self.connect.close()
@@ -211,8 +216,9 @@ class DBOperations:
             self.cursor.execute(self.sql_drop_table)
             self.connect.commit()
             return True
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
             return False
         finally:
             self.connect.close()
@@ -226,8 +232,9 @@ class DBOperations:
             if result is None:
                 return False
             return True
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -242,8 +249,9 @@ class DBOperations:
                 return next_key
             next_key = int(result + 1)
             return next_key
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -255,8 +263,9 @@ class DBOperations:
             if self.cursor.fetchone() is None:
                 return False
             return True
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -266,9 +275,9 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_insert, tuple_data)
             self.connect.commit()
-            print("Inserted data successfully")  # do I want this here?
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -279,8 +288,9 @@ class DBOperations:
             self.cursor.execute(self.sql_select_all)
             headers = [member[0] for member in self.cursor.description]
             return headers
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -292,8 +302,9 @@ class DBOperations:
             # saves (fetches) all data and assigns it to results.
             results = self.cursor.fetchall()
             return results
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -304,8 +315,9 @@ class DBOperations:
             self.cursor.execute(self.sql_search, tuple_employee_id)
             data_tuple = self.cursor.fetchall()[0]
             return data_tuple
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -315,8 +327,9 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_update_data, data_dic)
             self.connect.commit()
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -326,8 +339,9 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_delete_data, tuple_employee_id)
             self.connect.commit()
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
+            return None
         finally:
             self.connect.close()
 
@@ -525,7 +539,6 @@ class Userinput:
 class FormatEmployeeInput:
     def __init__(self) -> None:
         """No state information to be initialised."""
-        pass
 
     def input_employee_id(self, prompt_string, employee_id_default=None):
         """Validates format of data input for employee id."""
@@ -588,13 +601,13 @@ class FormatEmployeeInput:
                 if title_default is not None:
                     prompt_string += " [" + title_default + "]"
                 # get inputted employee title.
-                selection = user_inputs.input_str(prompt_string).title()
+                selection = user_inputs.input_str(prompt_string)
                 if selection is None:
                     selection = title_default
                 # if input != None then return.
                 if selection is not None:
                     # format so only first letter is upper case.
-                    return str(selection)
+                    return str(selection).title()
             except Exception as e:
                 print(e)
 
@@ -610,14 +623,12 @@ class FormatEmployeeInput:
                 if forename_default is not None:
                     prompt_string += "[" + forename_default + "]"
                 # get inputted employee forename.
-                selection = user_inputs.input_str(
-                    prompt_string, max_length
-                ).title()
+                selection = user_inputs.input_str(prompt_string, max_length)
                 if selection is None:
                     selection = forename_default
                 # if input != None then return.
                 if selection is not None:
-                    return str(selection)
+                    return str(selection).title()
             except Exception as e:
                 print(e)
 
@@ -633,14 +644,12 @@ class FormatEmployeeInput:
                 if surname_default is not None:
                     prompt_string += "[" + surname_default + "]"
                 # get inputted employee surname.
-                selection = user_inputs.input_str(
-                    prompt_string, max_length
-                ).title()
+                selection = user_inputs.input_str(prompt_string, max_length)
                 if selection is None:
                     selection = surname_default
                 # if input != None then return.
                 if selection is not None:
-                    return str(selection)
+                    return str(selection).title()
             except Exception as e:
                 print(e)
 
@@ -653,7 +662,7 @@ class FormatEmployeeInput:
             try:
                 if email_default is not None:
                     prompt_string += " [" + email_default + "]"
-                # get inputted employee surname.
+                # get inputted employee email.
                 selection = user_inputs.input_str(prompt_string)
                 if selection is None:
                     selection = email_default
@@ -663,6 +672,7 @@ class FormatEmployeeInput:
                     selection,
                 ):
                     return str(selection)
+                print("Error: ENTER a email as __ @ __ . __ .")
             except Exception as e:
                 print(e)
 
@@ -697,6 +707,7 @@ class Menu:
         Returns = int value of the user selected input."""
 
         input_selection = Userinput("main_menu_inputs")
+        screen_display = Displaydata()
 
         admin_selections = [
             "Create table Employee.",
@@ -715,9 +726,14 @@ class Menu:
             "Delete data - delete record in Employee table.",
             "Exit",
         ]
+
+        screen_display.clear_screen()
         print(
             "\nUse the up and down arrows to move through choices available."
         )
+
+        screen_display.hide_cursor()
+
         try:
             if self.admin:
 
@@ -739,8 +755,10 @@ class Menu:
                     user_selections.index(selection["user_selection"]) + 1
                 )
             return selection
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            print(err)
+        finally:
+            screen_display.show_cursor()
 
     def create_employee_table(self):
         """ADMIN ONLY. Creating the employee table with an override option."""
@@ -748,18 +766,16 @@ class Menu:
         db_ops = DBOperations()
         user_inputs = Userinput("menu_create_table_inputs")
 
-        # test does employee table exists.
-        if db_ops.check_table():
-            print("This table is already created.")
-            # if exists does admin want to override.
-            if user_inputs.yes_no_input(
-                "The table exists, do you want to override?"
-            ):
-                # output current table to csv file
-                # if table could not be dropped, error.
-                if not db_ops.drop_table():
-                    print("Error: Employee table could not be removed.")
-                    return
+        # test does employee table exists and what to override.
+        if db_ops.check_table() and user_inputs.yes_no_input(
+            "The table exists, do you want to override?"
+        ):
+            # output current table to csv file
+
+            # if table could not be dropped, error.
+            if not db_ops.drop_table():
+                print("Error: Employee table could not be removed.")
+                return
         # if table has been created print message.
         if db_ops.create_table():
             print("Employee Table has been created.")
@@ -771,9 +787,13 @@ class Menu:
         user_inputs = Userinput("menu_2_inputs")
         employee = Employee()
         employee_format = FormatEmployeeInput()
+        screen_display = Displaydata()
 
         while True:
             try:
+
+                screen_display.clear_screen()
+                print("Inserting Employee\n")
 
                 # setting employee id from user input.
                 employee.set_employee_id(
@@ -790,14 +810,14 @@ class Menu:
                 # setting employee forename from user input.
                 employee.set_forename(
                     employee_format.input_employee_forename(
-                        "Employee forename", employee.forename_max_length
+                        "Employee forename", None, employee.forename_max_length
                     )
                 )
 
                 # setting employee surname from user input.
                 employee.set_surname(
                     employee_format.input_employee_surname(
-                        "Employee surname", employee.surname_max_length
+                        "Employee surname", None, employee.surname_max_length
                     )
                 )
 
@@ -815,7 +835,8 @@ class Menu:
                 input_data = tuple(str(employee).split("\n"))
 
                 # insert data into table.
-                db_ops.insert_data(input_data)
+                if db_ops.insert_data(input_data):
+                    print("Inserted data successfully.")
 
                 # prompt user to insert
                 if not user_inputs.yes_no_input(
@@ -829,15 +850,18 @@ class Menu:
     def display_employee_records(self):
         """Selects and displays all the data for the Employee table."""
 
+        display_data = Displaydata()
         db_ops = DBOperations()
+        screen_display = Displaydata()
         try:
+            screen_display.clear_screen()
+            print("Employee Records\n")
             # return all the data from the employee table.
             data = db_ops.select_all()
             # return all the headers from the employee table.
             headers = db_ops.get_column_headers()
             # print out the table employees to the terminal.
-            # display_table = headers + data
-            printing_data(data, headers)
+            display_data.printing_data(data, headers)
         except Exception as e:
             print(e)
 
@@ -847,9 +871,14 @@ class Menu:
         user_inputs = Userinput("menu_2_inputs")
         db_ops = DBOperations()
         employee_format = FormatEmployeeInput()
+        display_data = Displaydata()
+        screen_display = Displaydata()
 
         while True:
             try:
+                screen_display.clear_screen()
+                print("Search for Employee\n")
+
                 # get user inputted empoyee id.
                 data = db_ops.get_employee_record(
                     (employee_format.get_employee_id(),)
@@ -858,7 +887,7 @@ class Menu:
                 headers = db_ops.get_column_headers()
 
                 # print out employee record to the terminal.
-                printing_data((data,), headers)
+                display_data.printing_data((data,), headers)
 
                 # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
@@ -875,9 +904,17 @@ class Menu:
         user_inputs = Userinput("menu_2_inputs")
         employee = Employee()
         employee_format = FormatEmployeeInput()
+        screen_display = Displaydata()
 
         while True:
             try:
+
+                screen_display.clear_screen()
+                print("Updating Employee\n")
+                print(
+                    "Please enter a new value or press "
+                    "ENTER to keep the existing value.\n"
+                )
 
                 # prompt for input employee id and save.
                 employee.set_employee_id(employee_format.get_employee_id())
@@ -889,9 +926,6 @@ class Menu:
                 # and saves values to employee.
                 employee.unpack_employee_tuple(
                     db_ops.get_employee_record((employee.get_employee_id(),))
-                )
-                print(
-                    "Please enter a new value or press ENTER to keep the existing value."
                 )
 
                 # display message: do you want to retain or change value?
@@ -953,7 +987,8 @@ class Menu:
 
                 # do you want to update the details?
                 if user_inputs.yes_no_input(
-                    "Do you want to save and update changes to the Employee record?"
+                    "Do you want to save and update "
+                    "changes to the Employee record?"
                 ):
                     # convert employee into dictionary.
                     input_data = employee.employee_record_dic()
@@ -978,9 +1013,13 @@ class Menu:
         user_inputs = Userinput("menu_2_inputs")
         employee = Employee()
         employee_format = FormatEmployeeInput()
+        screen_display = Displaydata()
 
         while True:
             try:
+                screen_display.clear_screen()
+                print("Delete Employee\n")
+
                 # ask for valid employeeID to delete.
                 employee.set_employee_id(employee_format.get_employee_id())
 
@@ -1001,22 +1040,46 @@ class Menu:
                 print(e)
 
 
-def printing_data(data_tuple, headers_list):
-    """Formats and prints out data from a tuple to the termial."""
-    # creating a dataframe of all the data to be printed.
-    df = pd.DataFrame(data_tuple, columns=headers_list)
-    # df["Salary"] = df["Salary"].format("£{0:,.2f}")
-    # pd.options.display.float_format = "£{:, .2f}".format
-    # df.style.format({"Salary": "{:,.2f}".format})
-    print(tabulate(df, headers="keys", tablefmt="psql", showindex=False))
+class Displaydata:
+    """routines to display output"""
 
+    def __init__(self):
+        # clear the screen for new output
+        self.os = name
 
-# def clear_terminal():
-#    """Clears the terminal display."""
-#    if platform.system() == "Windows":
-#        subprocess.call("cls", shell=True).communicate()
-#    else:
-#        print("\033c", end="")
+    def clear_screen(self):
+        """clears the terminal for new ouput"""
+        if self.os == "nt":
+            _ = system("cls")
+        else:
+            _ = system("clear")
+
+    def hide_cursor(self):
+        """hides terminal cursor"""
+        if not self.os == "nt":
+            print("\x1b[?25l")
+
+    def show_cursor(self):
+        """reveals terminal cursor"""
+        if not self.os == "nt":
+            print("\x1b[?25h")
+
+    def printing_data(self, data_tuple, headers_list):
+        """Formats and prints out data from a tuple to the termial."""
+
+        user_input = Userinput("printing data input")
+
+        # self.clear_screen()
+
+        # creating a dataframe of all the data to be printed.
+        df = pd.DataFrame(data_tuple, columns=headers_list)
+        print(tabulate(df, headers="keys", tablefmt="psql", showindex=False))
+
+        if user_input.yes_no_input(
+            "Do you want to save te output to a csv file?"
+        ):
+            df.to_csv("employee_records.csv", index=False)
+        user_input.yes_no_input("Enter yes to continue")
 
 
 if __name__ == "__main__":
