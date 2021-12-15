@@ -204,7 +204,6 @@ class DBOperations:
             return True
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
             return False
         finally:
             self.connect.close()
@@ -218,7 +217,6 @@ class DBOperations:
             return True
         except sqlite3.DatabaseError as err:
             print(err)
-            return None
             return False
         finally:
             self.connect.close()
