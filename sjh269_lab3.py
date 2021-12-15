@@ -2,6 +2,7 @@
 sjh269_lab3.py
 --------------
 CM50259 - Lab3 Coursework:
+https://replit.com/@HIGGSSAM/CM50259-CW3#main.py
 Termial interface for managing an SQLite database.
 
 Classes:
@@ -23,6 +24,8 @@ import sqlite3
 import re
 import sys
 import inquirer
+import pandas as pd
+from tabulate import tabulate
 
 # Disable the pylint errors from Black reformatting style on block indents
 
@@ -63,10 +66,9 @@ class DBOperations:
     - get_next_primary_key() -> returns int
     - check_primary_key(tuple) -> returns boolean
     - insert_data(tuple)
-    - get_column_headers() -> returns tuple
+    - get_column_headers() -> returns list
     - select_all() -> returns list
     - get_employee_record(tuple) -> returns tuple
-    - search_data TO DO
     - update_data(tuple)
     - delete_data(tuple)
 
@@ -149,16 +151,16 @@ class DBOperations:
     WHERE EmployeeID = ?; 
     """
 
-    # deleltes an existing employees table
+    # deletes an existing employees table.
     sql_drop_table = """
     DROP TABLE IF EXISTS employees;
     """
 
     def __init__(self):
         try:
-            # creating a connection
             # ensures that database file is initialisied.
             self.connect = sqlite3.connect(self.database_name)
+            # initialising cursor.
             self.cursor = None
             # closing connection to the database.
             self.connect.close()
@@ -179,15 +181,13 @@ class DBOperations:
     def check_table(self):
         """Checks if a table exists in the database."""
         try:
-            # creating a connection.
             self.get_connection()
-            # test to see if employee table exists.
             self.cursor.execute(self.sql_check_table)
             if self.cursor.fetchone() is None:
                 return False
             return True
-        except Exception as e:
-            print(e)
+        except sqlite3.DatabaseError as err:
+            print(err)
         finally:
             self.connect.close()
 
@@ -250,9 +250,7 @@ class DBOperations:
     def check_primary_key(self, tuple_employee_id):
         """Checks if selected primary key already exists in table."""
         try:
-            # creating a connection.
             self.get_connection()
-            # test to see if employeeID exists in .
             self.cursor.execute(self.sql_select_primary_key, tuple_employee_id)
             if self.cursor.fetchone() is None:
                 return False
@@ -280,8 +278,7 @@ class DBOperations:
             self.get_connection()
             self.cursor.execute(self.sql_select_all)
             headers = [member[0] for member in self.cursor.description]
-            headers_tuple = [tuple(headers)]
-            return headers_tuple
+            return headers
         except Exception as e:
             print(e)
         finally:
@@ -307,33 +304,6 @@ class DBOperations:
             self.cursor.execute(self.sql_search, tuple_employee_id)
             data_tuple = self.cursor.fetchall()[0]
             return data_tuple
-        except Exception as e:
-            print(e)
-        finally:
-            self.connect.close()
-
-    def search_data(self):
-        try:
-            self.get_connection()
-            employeeID = int(input("Enter Employee ID: "))
-            self.cursor.execute(self.sql_search, tuple(str(employeeID)))
-            result = self.cursor.fetchone()
-            if type(result) == type(tuple()):
-                for index, detail in enumerate(result):
-                    if index == 0:
-                        print("Employee ID: " + str(detail))
-                    elif index == 1:
-                        print("Employee Title: " + detail)
-                    elif index == 2:
-                        print("Employee Name: " + detail)
-                    elif index == 3:
-                        print("Employee Surname: " + detail)
-                    elif index == 4:
-                        print("Employee Email: " + detail)
-                    else:
-                        print("Salary: " + str(detail))
-            else:
-                print("No Record")
         except Exception as e:
             print(e)
         finally:
@@ -531,7 +501,7 @@ class Userinput:
                 return __user_input
             print(
                 f"""Input Error: Please enter input with
-                 less than {max_length} characters"""
+                 less than {str(max_length)} characters"""
             )
 
     def input_list(self, input_message_str, input_items_list):
@@ -618,7 +588,7 @@ class FormatEmployeeInput:
                 if title_default is not None:
                     prompt_string += " [" + title_default + "]"
                 # get inputted employee title.
-                selection = user_inputs.input_str(prompt_string)
+                selection = user_inputs.input_str(prompt_string).title()
                 if selection is None:
                     selection = title_default
                 # if input != None then return.
@@ -640,7 +610,9 @@ class FormatEmployeeInput:
                 if forename_default is not None:
                     prompt_string += "[" + forename_default + "]"
                 # get inputted employee forename.
-                selection = user_inputs.input_str(prompt_string, max_length)
+                selection = user_inputs.input_str(
+                    prompt_string, max_length
+                ).title()
                 if selection is None:
                     selection = forename_default
                 # if input != None then return.
@@ -661,7 +633,9 @@ class FormatEmployeeInput:
                 if surname_default is not None:
                     prompt_string += "[" + surname_default + "]"
                 # get inputted employee surname.
-                selection = user_inputs.input_str(prompt_string, max_length)
+                selection = user_inputs.input_str(
+                    prompt_string, max_length
+                ).title()
                 if selection is None:
                     selection = surname_default
                 # if input != None then return.
@@ -779,8 +753,9 @@ class Menu:
             print("This table is already created.")
             # if exists does admin want to override.
             if user_inputs.yes_no_input(
-                "The table exist, do you want to override?"
+                "The table exists, do you want to override?"
             ):
+                # output current table to csv file
                 # if table could not be dropped, error.
                 if not db_ops.drop_table():
                     print("Error: Employee table could not be removed.")
@@ -861,8 +836,8 @@ class Menu:
             # return all the headers from the employee table.
             headers = db_ops.get_column_headers()
             # print out the table employees to the terminal.
-            display_table = headers + data
-            printing_data(display_table)  # list of tuples
+            # display_table = headers + data
+            printing_data(data, headers)
         except Exception as e:
             print(e)
 
@@ -881,9 +856,9 @@ class Menu:
                 )
                 # return all the headers from the employee table.
                 headers = db_ops.get_column_headers()
+
                 # print out employee record to the terminal.
-                display_table = headers + [data]
-                printing_data(display_table)  # list of tuples
+                printing_data((data,), headers)
 
                 # prompt user to edit another employee record.
                 if not user_inputs.yes_no_input(
@@ -1026,22 +1001,14 @@ class Menu:
                 print(e)
 
 
-def printing_data(data_tuple):
+def printing_data(data_tuple, headers_list):
     """Formats and prints out data from a tuple to the termial."""
-    # if 0 < len(data_tuple) <= 21:
-    # print out formatted table with column headers.
-    for row in data_tuple:
-        output = f"""{row[0]}|{row[1]}|{row[2]}|{row[3]}|{row[4]}|{row[5]}"""
-        print(output)
-    # else:
-    # TO DO
-    # if more than 20 records only display the first 20
-    # and press Enter to move through records?
-    #    counter = 1
-    #    for row in data_tuple:
-    #        output = """{0}|{1}|{2}|{3}|{4}|{5}""".format(*row)
-    #        print(output)
-    #        counter += 1
+    # creating a dataframe of all the data to be printed.
+    df = pd.DataFrame(data_tuple, columns=headers_list)
+    # df["Salary"] = df["Salary"].format("£{0:,.2f}")
+    # pd.options.display.float_format = "£{:, .2f}".format
+    # df.style.format({"Salary": "{:,.2f}".format})
+    print(tabulate(df, headers="keys", tablefmt="psql", showindex=False))
 
 
 # def clear_terminal():
